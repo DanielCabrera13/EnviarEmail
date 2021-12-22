@@ -14,6 +14,7 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -121,44 +122,56 @@ public class EmailController implements Initializable {
 
     @FXML
     void onEnviarAction(ActionEvent e) {
-    	try {
-    		
-    	int puertoNumber = Integer.parseInt(puerto.get());
     	
-    	Email email = new SimpleEmail();
-    	email.setHostName(nombreIP.get());
-    	email.setSmtpPort(puertoNumber);
-    	email.setAuthenticator(new DefaultAuthenticator(from.get(), psswd.get()));
-    	email.setSSLOnConnect(ssl.get());
-    	email.setFrom(from.get());
-    	email.setSubject(asunto.get());
-    	email.setMsg(mensaje.get());
-    	email.addTo(to.get());
-    	email.send();
-    	
-    	Alert alertInf = new Alert(AlertType.INFORMATION);
-    	Stage stage = (Stage) alertInf.getDialogPane().getScene().getWindow();
-		stage.getIcons().add(new Image(getClass().getResourceAsStream("/imagenes/email-send-icon-32x32.png")));
-		alertInf.setTitle("Mensaje enviado");
-		alertInf.setHeaderText("Mensaje enviado con éxito a: "+from.get());
-		alertInf.showAndWait();
+    	Task<Void> emailTask = new Task<Void>() {
+
+			protected Void call() throws Exception {
+				Thread.sleep(5000L);
+
+				int puertoNumber = Integer.parseInt(puerto.get());
+
+				Email email = new SimpleEmail();
+				email.setHostName(nombreIP.get());
+				email.setSmtpPort(puertoNumber);
+				email.setAuthenticator(new DefaultAuthenticator(from.get(), psswd.get()));
+				email.setSSLOnConnect(ssl.get());
+				email.setFrom(from.get());
+				email.setSubject(asunto.get());
+				email.setMsg(mensaje.get());
+				email.addTo(to.get());
+				email.send();
+				
+				return null;
+			}
+		};
 		
-		destinatarioText.clear();
-		asuntoText.clear();
-		mensajeText.clear();
+		emailTask.setOnSucceeded(event -> {
+			
+			Alert alertInf = new Alert(AlertType.INFORMATION);
+	    	Stage stage = (Stage) alertInf.getDialogPane().getScene().getWindow();
+			stage.getIcons().add(new Image(getClass().getResourceAsStream("/imagenes/email-send-icon-32x32.png")));
+			alertInf.setTitle("Mensaje enviado");
+			alertInf.setHeaderText("Mensaje enviado con éxito a: "+from.get());
+			alertInf.showAndWait();
+			
+			destinatarioText.clear();
+			asuntoText.clear();
+			mensajeText.clear();
+			;
+		});
 		
-    	
-    	}catch (Exception error) {
-  
-    		Alert alertError = new Alert(AlertType.ERROR);
+		emailTask.setOnFailed(event -> {
+			
+			Alert alertError = new Alert(AlertType.ERROR);
     		Stage stage = (Stage) alertError.getDialogPane().getScene().getWindow();
     		stage.getIcons().add(new Image(getClass().getResourceAsStream("/imagenes/email-send-icon-32x32.png")));
 			alertError.setTitle("Error");
 			alertError.setHeaderText("No se pudo enviar el email.");
-			alertError.setContentText("Error producido: " + error.getMessage());
+			alertError.setContentText("Error producido: " + event.getSource().getException().getMessage());
 			alertError.showAndWait();
+		});
 		
-		}
+		new Thread(emailTask).start();
 
     }
 
